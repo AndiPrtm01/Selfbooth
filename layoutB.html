@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Photo Booth - Layout B</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #83b8c6;
+      color: #333;
+    }
+
+    video {
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 3/4;
+      background: black;
+      border: 8px solid white;
+      border-radius: 20px;
+      object-fit: cover;
+    }
+
+    canvas {
+      width: 100px;
+      height: 300px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    #countdown {
+      position: absolute;
+      font-size: 60px;
+      font-weight: bold;
+      color: rgba(255, 0, 0, 0.6);
+      width: 100%;
+      top: 40%;
+      text-align: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @media (min-width: 640px) {
+      canvas {
+        width: 140px;
+        height: 420px;
+      }
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center pb-10">
+
+  <!-- Navbar -->
+  <nav class="w-full bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="text-2xl font-bold text-[#00796b]">SELFBOOTH.ID</div>
+      <ul class="hidden sm:flex space-x-4 font-semibold text-[#00796b]">
+        <li><a href="index.html" class="hover:text-[#004d40]">Home</a></li>
+        <li><a href="about.html" class="hover:text-[#004d40]">About</a></li>
+        <li><a href="privacy.html" class="hover:text-[#004d40]">Privacy</a></li>
+        <li><a href="contact.html" class="hover:text-[#004d40]">Contact</a></li>
+        <li><a href="choseLayout.html" class="hover:text-[#004d40]">Layout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <section class="text-center py-6 px-4">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-[#00695c]">📸 Layout B - 4 Pose Strip</h1>
+    <p class="text-base sm:text-lg text-gray-700 max-w-xl mx-auto mt-2">Atur timer & filter, lalu mulai bergaya!</p>
+  </section>
+
+  <!-- Kamera & Kontrol -->
+  <section class="w-full flex flex-col lg:flex-row justify-center items-center gap-6 px-4">
+    <div class="flex flex-col items-center">
+      <div class="relative">
+        <video id="video" autoplay playsinline></video>
+        <div id="countdown"></div>
+      </div>
+
+      <!-- Slider Filter -->
+      <div id="filters" class="mt-4 flex flex-wrap justify-center gap-3 w-full max-w-xs">
+        <label class="flex flex-col items-center w-full">
+          <span class="text-sm font-medium">Kecerahan</span>
+          <input type="range" id="brightness" min="0" max="200" value="100" class="w-full">
+        </label>
+        <label class="flex flex-col items-center w-full">
+          <span class="text-sm font-medium">Grayscale</span>
+          <input type="range" id="grayscale" min="0" max="100" value="0" class="w-full">
+        </label>
+        <label class="flex flex-col items-center w-full">
+          <span class="text-sm font-medium">Sepia</span>
+          <input type="range" id="sepia" min="0" max="100" value="0" class="w-full">
+        </label>
+        <label class="flex flex-col items-center w-full">
+          <span class="text-sm font-medium">Blur</span>
+          <input type="range" id="blur" min="0" max="10" value="0" class="w-full">
+        </label>
+      </div>
+
+      <!-- Dropdown -->
+      <div class="mt-4 flex gap-4">
+        <select id="timerSelect" class="border rounded px-4 py-2">
+          <option value="3">3 Detik</option>
+          <option value="5">5 Detik</option>
+          <option value="7">7 Detik</option>
+        </select>
+
+        <select id="filterSelect" class="border rounded px-4 py-2">
+          <option value="custom">Custom (Slider)</option>
+          <option value="grayscale(100%)">Hitam Putih</option>
+          <option value="sepia(0.6)">Vintage</option>
+          <option value="brightness(1.2) contrast(1.1)">Lembut</option>
+        </select>
+      </div>
+
+      <button id="start"
+        class="mt-4 bg-pink-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-pink-600 transition">📷 Mulai
+        Foto</button>
+
+      <div id="after-capture" class="hidden mt-4 space-x-4">
+        <button id="retake" class="bg-yellow-500 text-white px-5 py-2 rounded-full">🔁 Retake</button>
+        <button id="done" class="bg-green-600 text-white px-5 py-2 rounded-full">✅ Done</button>
+      </div>
+    </div>
+
+    <canvas id="strip" width="400" height="900" class="bg-white rounded-xl shadow-md"></canvas>
+  </section>
+
+  <script>
+    const video = document.getElementById('video');
+    const stripCanvas = document.getElementById('strip');
+    const stripCtx = stripCanvas.getContext('2d');
+    const startBtn = document.getElementById('start');
+    const retakeBtn = document.getElementById('retake');
+    const doneBtn = document.getElementById('done');
+    const afterCapture = document.getElementById('after-capture');
+    const countdownEl = document.getElementById('countdown');
+    const filterSelect = document.getElementById('filterSelect');
+
+    const brightness = document.getElementById("brightness");
+    const grayscale = document.getElementById("grayscale");
+    const sepia = document.getElementById("sepia");
+    const blur = document.getElementById("blur");
+
+    function updateSliderFilters() {
+      const b = brightness.value;
+      const g = grayscale.value;
+      const s = sepia.value;
+      const bl = blur.value;
+      return `brightness(${b}%) grayscale(${g}%) sepia(${s}%) blur(${bl}px)`;
+    }
+
+    function applyFilter() {
+      const selected = filterSelect.value;
+      if (selected === "custom") {
+        video.style.filter = updateSliderFilters();
+      } else {
+        video.style.filter = selected;
+      }
+    }
+
+    filterSelect.addEventListener("change", applyFilter);
+
+    [brightness, grayscale, sepia, blur].forEach(input => {
+      input.addEventListener("input", () => {
+        filterSelect.value = "custom";
+        applyFilter();
+      });
+    });
+
+    navigator.mediaDevices.getUserMedia({video: true})
+      .then(stream => {video.srcObject = stream;})
+      .catch(err => alert("Tidak bisa mengakses kamera: " + err));
+
+    async function countdown(seconds) {
+      return new Promise(resolve => {
+        let count = seconds;
+        countdownEl.textContent = count;
+        const interval = setInterval(() => {
+          count--;
+          countdownEl.textContent = count > 0 ? count : "";
+          if (count <= 0) clearInterval(interval), resolve();
+        }, 1000);
+      });
+    }
+
+    startBtn.addEventListener("click", async () => {
+      const timer = parseInt(document.getElementById('timerSelect').value);
+      startBtn.disabled = true;
+      stripCtx.fillStyle = "white";
+      stripCtx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+
+      for (let i = 0; i < 4; i++) {
+        await countdown(timer);
+        const filterValue = filterSelect.value === "custom" ? updateSliderFilters() : filterSelect.value;
+        stripCtx.filter = filterValue;
+        stripCtx.save();
+        stripCtx.translate(stripCanvas.width, 0);
+        stripCtx.scale(-1, 1);
+        stripCtx.drawImage(video, 0, i * (stripCanvas.height / 4), stripCanvas.width, stripCanvas.height / 4);
+        stripCtx.restore();
+      }
+
+      startBtn.style.display = "none";
+      afterCapture.classList.remove("hidden");
+    });
+
+    retakeBtn.addEventListener("click", () => {
+      stripCtx.clearRect(0, 0, stripCanvas.width, stripCanvas.height);
+      startBtn.style.display = "inline-block";
+      startBtn.disabled = false;
+      afterCapture.classList.add("hidden");
+    });
+
+    doneBtn.addEventListener("click", () => {
+      const dataURL = stripCanvas.toDataURL("image/png");
+      localStorage.setItem("photoStrip", dataURL);
+      window.location.href = "EditA.html";
+    });
+  </script>
+</body>
+
+</html>
